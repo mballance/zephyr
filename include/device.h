@@ -14,6 +14,13 @@
  * @}
  */
 /**
+ * @brief Miscellaneous Drivers APIs
+ * @defgroup misc_interfaces Miscellaneous Drivers APIs
+ * @ingroup io_interfaces
+ * @{
+ * @}
+ */
+/**
  * @brief Device Model APIs
  * @defgroup device_model Device Model APIs
  * @{
@@ -157,6 +164,21 @@ typedef int16_t device_handle_t;
 			data_ptr, cfg_ptr, level, prio, api_ptr)
 
 /**
+ * @def DEVICE_DT_NAME
+ *
+ * @brief Return a string name for a devicetree node.
+ *
+ * @details This macro returns a string literal usable as a device name
+ * from a devicetree node. If the node has a "label" property, its value is
+ * returned. Otherwise, the node's full "node-name@@unit-address" name is
+ * returned.
+ *
+ * @param node_id The devicetree node identifier.
+ */
+#define DEVICE_DT_NAME(node_id) \
+	DT_PROP_OR(node_id, label, DT_NODE_FULL_NAME(node_id))
+
+/**
  * @def DEVICE_DT_DEFINE
  *
  * @brief Like DEVICE_DEFINE but taking metadata from a devicetree node.
@@ -197,7 +219,7 @@ typedef int16_t device_handle_t;
 			 data_ptr, cfg_ptr, level, prio,		\
 			 api_ptr, ...)					\
 	Z_DEVICE_DEFINE(node_id, Z_DEVICE_DT_DEV_NAME(node_id),		\
-			DT_PROP_OR(node_id, label, ""), init_fn,	\
+			DEVICE_DT_NAME(node_id), init_fn,		\
 			pm_control_fn,					\
 			data_ptr, cfg_ptr, level, prio,			\
 			api_ptr, __VA_ARGS__)
@@ -255,6 +277,29 @@ typedef int16_t device_handle_t;
  * @param inst instance number
  */
 #define DEVICE_DT_INST_GET(inst) DEVICE_DT_GET(DT_DRV_INST(inst))
+
+/**
+ * @def DEVICE_DT_GET_ANY
+ *
+ * @brief Obtain a pointer to a device object by devicetree compatible
+ *
+ * If any enabled devicetree node has the given compatible and a
+ * device object was created from it, this returns that device.
+ *
+ * If there no such devices, this returns NULL.
+ *
+ * If there are multiple, this returns an arbitrary one.
+ *
+ * If this returns non-NULL, the device must be checked for readiness
+ * before use, e.g. with device_is_ready().
+ *
+ * @param compat lowercase-and-underscores devicetree compatible
+ * @return a pointer to a device, or NULL
+ */
+#define DEVICE_DT_GET_ANY(compat)			\
+	COND_CODE_1(DT_HAS_COMPAT_STATUS_OKAY(compat),	\
+		    (DEVICE_DT_GET(DT_INST(0, compat))),	\
+		    (NULL))
 
 /**
  * @def DEVICE_GET
@@ -428,6 +473,24 @@ device_from_handle(device_handle_t dev_handle)
 }
 
 /**
+ * @brief Prototype for functions used when iterating over a set of devices.
+ *
+ * Such a function may be used in API that identifies a set of devices and
+ * provides a visitor API supporting caller-specific interaction with each
+ * device in the set.
+ *
+ * The visit is said to succeed if the visitor returns a non-negative value.
+ *
+ * @param dev a device in the set being iterated
+ *
+ * @param context state used to support the visitor function
+ *
+ * @return A non-negative number to allow walking to continue, and a negative
+ * error code to case the iteration to stop.
+ */
+typedef int (*device_visitor_callback_t)(const struct device *dev, void *context);
+
+/**
  * @brief Get the set of handles for devicetree dependencies of this device.
  *
  * These are the device dependencies inferred from devicetree.
@@ -459,6 +522,43 @@ device_required_handles_get(const struct device *dev,
 
 	return rv;
 }
+
+/**
+ * @brief Visit every device that @p dev directly requires.
+ *
+ * Zephyr maintains information about which devices are directly required by
+ * another device; for example an I2C-based sensor driver will require an I2C
+ * controller for communication.  Required devices can derive from
+ * statically-defined devicetree relationships or dependencies registered
+ * at runtime.
+ *
+ * This API supports operating on the set of required devices.  Example uses
+ * include making sure required devices are ready before the requiring device
+ * is used, and releasing them when the requiring device is no longer needed.
+ *
+ * There is no guarantee on the order in which required devices are visited.
+ *
+ * If the @p visitor function returns a negative value iteration is halted,
+ * and the returned value from the visitor is returned from this function.
+ *
+ * @note This API is not available to unprivileged threads.
+ *
+ * @param dev a device of interest.  The devices that this device depends on
+ * will be used as the set of devices to visit.  This parameter must not be
+ * null.
+ *
+ * @param visitor_cb the function that should be invoked on each device in the
+ * dependency set.  This parameter must not be null.
+ *
+ * @param context state that is passed through to the visitor function.  This
+ * parameter may be null if @p visitor tolerates a null @p context.
+ *
+ * @return The number of devices that were visited if all visits succeed, or
+ * the negative value returned from the first visit that did not succeed.
+ */
+int device_required_foreach(const struct device *dev,
+			  device_visitor_callback_t visitor_cb,
+			  void *context);
 
 /**
  * @brief Retrieve the device structure for a driver by name
@@ -543,11 +643,6 @@ static inline int z_impl_device_usable_check(const struct device *dev)
 static inline bool device_is_ready(const struct device *dev)
 {
 	return device_usable_check(dev) == 0;
-}
-
-static inline bool z_impl_device_is_ready(const struct device *dev)
-{
-	return z_device_ready(dev);
 }
 
 /**
@@ -973,7 +1068,7 @@ BUILD_ASSERT(sizeof(device_handle_t) == 2, "fix the linker scripts");
 		Z_DEVICE_DEFINE_INIT(node_id, dev_name, pm_control_fn)	\
 	};								\
 	BUILD_ASSERT(sizeof(Z_STRINGIFY(drv_name)) <= Z_DEVICE_MAX_NAME_LEN, \
-		     Z_STRINGIFY(DEVICE_GET_NAME(drv_name)) " too long"); \
+		     Z_STRINGIFY(DEVICE_NAME_GET(drv_name)) " too long"); \
 	Z_INIT_ENTRY_DEFINE(DEVICE_NAME_GET(dev_name), init_fn,		\
 		(&DEVICE_NAME_GET(dev_name)), level, prio)
 

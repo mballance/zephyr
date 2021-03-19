@@ -9,9 +9,25 @@
  * - DT_CLOCKS_LABEL_BY_IDX
  * - DT_CLOCKS_LABEL_BY_NAME
  * - DT_CLOCKS_LABEL
+ * - DT_PWMS_LABEL_BY_IDX
+ * - DT_PWMS_LABEL_BY_NAME
+ * - DT_PWMS_LABEL
+ * - DT_IO_CHANNELS_LABEL_BY_IDX
+ * - DT_IO_CHANNELS_LABEL_BY_NAME
+ * - DT_IO_CHANNELS_LABEL
+ * - DT_DMAS_LABEL_BY_IDX
+ * - DT_DMAS_LABEL_BY_NAME
  * - DT_INST_CLOCKS_LABEL_BY_IDX
  * - DT_INST_CLOCKS_LABEL_BY_NAME
  * - DT_INST_CLOCKS_LABEL
+ * - DT_INST_PWMS_LABEL_BY_IDX
+ * - DT_INST_PWMS_LABEL_BY_NAME
+ * - DT_INST_PWMS_LABEL
+ * - DT_INST_IO_CHANNELS_LABEL_BY_IDX
+ * - DT_INST_IO_CHANNELS_LABEL_BY_NAME
+ * - DT_INST_IO_CHANNELS_LABEL
+ * - DT_INST_DMAS_LABEL_BY_IDX
+ * - DT_INST_DMAS_LABEL_BY_NAME
  */
 #define __DEPRECATED_MACRO
 
@@ -49,6 +65,12 @@
 
 #define TEST_PWM_CTLR_1 DT_NODELABEL(test_pwm1)
 #define TEST_PWM_CTLR_2 DT_NODELABEL(test_pwm2)
+
+#define TEST_DMA_CTLR_1 DT_NODELABEL(test_dma1)
+#define TEST_DMA_CTLR_2 DT_NODELABEL(test_dma2)
+
+#define TEST_IO_CHANNEL_CTLR_1 DT_NODELABEL(test_adc_1)
+#define TEST_IO_CHANNEL_CTLR_2 DT_NODELABEL(test_adc_2)
 
 #define TA_HAS_COMPAT(compat) DT_NODE_HAS_COMPAT(TEST_ARRAYS, compat)
 
@@ -286,6 +308,9 @@ static void test_bus(void)
 #define DT_DRV_COMPAT vnd_spi_device_2
 	/* there is only one instance, and it has no CS */
 	zassert_equal(DT_INST_SPI_DEV_HAS_CS_GPIOS(0), 0, "");
+	/* since there's only one instance, we also know its bus. */
+	zassert_true(DT_SAME_NODE(TEST_SPI_NO_CS, DT_INST_BUS(0)),
+		     "expected TEST_SPI_NO_CS as bus for vnd,spi-device-2");
 
 #undef DT_DRV_COMPAT
 #define DT_DRV_COMPAT vnd_spi_device
@@ -294,6 +319,11 @@ static void test_bus(void)
 	 * either vnd,spi-device.
 	 */
 	zassert_equal(DT_INST_SPI_DEV_HAS_CS_GPIOS(0), 1, "");
+
+#define CTLR_NODE DT_INST_SPI_DEV_CS_GPIOS_CTLR(0)
+	zassert_true(DT_SAME_NODE(CTLR_NODE, DT_NODELABEL(test_gpio_1)) ||
+		     DT_SAME_NODE(CTLR_NODE, DT_NODELABEL(test_gpio_2)), "");
+#undef CTLR_NODE
 
 	zassert_true(!strncmp(gpio, DT_INST_SPI_DEV_CS_GPIOS_LABEL(0),
 			      strlen(gpio)), "");
@@ -854,6 +884,38 @@ static void test_io_channels(void)
 	zassert_true(!strcmp(DT_INST_IO_CHANNELS_LABEL(0),
 			     "TEST_ADC_1"), "");
 
+	/* DT_IO_CHANNELS_CTLR_BY_IDX */
+	zassert_true(DT_SAME_NODE(DT_IO_CHANNELS_CTLR_BY_IDX(TEST_TEMP, 0),
+				  TEST_IO_CHANNEL_CTLR_1), "");
+	zassert_true(DT_SAME_NODE(DT_IO_CHANNELS_CTLR_BY_IDX(TEST_TEMP, 1),
+				  TEST_IO_CHANNEL_CTLR_2), "");
+
+	/* DT_IO_CHANNELS_CTLR_BY_NAME */
+	zassert_true(DT_SAME_NODE(DT_IO_CHANNELS_CTLR_BY_NAME(TEST_TEMP, ch1),
+				  TEST_IO_CHANNEL_CTLR_1), "");
+	zassert_true(DT_SAME_NODE(DT_IO_CHANNELS_CTLR_BY_NAME(TEST_TEMP, ch2),
+				  TEST_IO_CHANNEL_CTLR_2), "");
+
+	/* DT_IO_CHANNELS_CTLR */
+	zassert_true(DT_SAME_NODE(DT_IO_CHANNELS_CTLR(TEST_TEMP),
+				  TEST_IO_CHANNEL_CTLR_1), "");
+
+	/* DT_INST_IO_CHANNELS_CTLR_BY_IDX */
+	zassert_true(DT_SAME_NODE(DT_INST_IO_CHANNELS_CTLR_BY_IDX(0, 0),
+				  TEST_IO_CHANNEL_CTLR_1), "");
+	zassert_true(DT_SAME_NODE(DT_INST_IO_CHANNELS_CTLR_BY_IDX(0, 1),
+				  TEST_IO_CHANNEL_CTLR_2), "");
+
+	/* DT_INST_IO_CHANNELS_CTLR_BY_NAME */
+	zassert_true(DT_SAME_NODE(DT_INST_IO_CHANNELS_CTLR_BY_NAME(0, ch1),
+				  TEST_IO_CHANNEL_CTLR_1), "");
+	zassert_true(DT_SAME_NODE(DT_INST_IO_CHANNELS_CTLR_BY_NAME(0, ch2),
+				  TEST_IO_CHANNEL_CTLR_2), "");
+
+	/* DT_INST_IO_CHANNELS_CTLR */
+	zassert_true(DT_SAME_NODE(DT_INST_IO_CHANNELS_CTLR(0),
+				  TEST_IO_CHANNEL_CTLR_1), "");
+
 	zassert_equal(DT_IO_CHANNELS_INPUT_BY_IDX(TEST_TEMP, 0), 10, "");
 	zassert_equal(DT_IO_CHANNELS_INPUT_BY_IDX(TEST_TEMP, 1), 20, "");
 	zassert_equal(DT_IO_CHANNELS_INPUT_BY_NAME(TEST_TEMP, ch1), 10, "");
@@ -888,6 +950,37 @@ static void test_dma(void)
 			     "TEST_DMA_CTRL_1"), "");
 	zassert_true(!strcmp(DT_INST_DMAS_LABEL_BY_IDX(0, 0),
 			     "TEST_DMA_CTRL_1"), "");
+
+	/* DT_DMAS_CTLR_BY_IDX */
+	zassert_true(DT_SAME_NODE(DT_DMAS_CTLR_BY_IDX(TEST_TEMP, 0),
+				  TEST_DMA_CTLR_1), "");
+	zassert_true(DT_SAME_NODE(DT_DMAS_CTLR_BY_IDX(TEST_TEMP, 1),
+				  TEST_DMA_CTLR_2), "");
+
+	/* DT_DMAS_CTLR_BY_NAME */
+	zassert_true(DT_SAME_NODE(DT_DMAS_CTLR_BY_NAME(TEST_TEMP, tx),
+				  TEST_DMA_CTLR_1), "");
+	zassert_true(DT_SAME_NODE(DT_DMAS_CTLR_BY_NAME(TEST_TEMP, rx),
+				  TEST_DMA_CTLR_2), "");
+
+	/* DT_DMAS_CTLR */
+	zassert_true(DT_SAME_NODE(DT_DMAS_CTLR(TEST_TEMP),
+				  TEST_DMA_CTLR_1), "");
+
+	/* DT_INST_DMAS_CTLR_BY_IDX */
+	zassert_true(DT_SAME_NODE(DT_INST_DMAS_CTLR_BY_IDX(0, 0),
+				  TEST_DMA_CTLR_1), "");
+	zassert_true(DT_SAME_NODE(DT_INST_DMAS_CTLR_BY_IDX(0, 1),
+				  TEST_DMA_CTLR_2), "");
+
+	/* DT_INST_DMAS_CTLR_BY_NAME */
+	zassert_true(DT_SAME_NODE(DT_INST_DMAS_CTLR_BY_NAME(0, tx),
+				  TEST_DMA_CTLR_1), "");
+	zassert_true(DT_SAME_NODE(DT_INST_DMAS_CTLR_BY_NAME(0, rx),
+				  TEST_DMA_CTLR_2), "");
+
+	/* DT_INST_DMAS_CTLR */
+	zassert_true(DT_SAME_NODE(DT_INST_DMAS_CTLR(0), TEST_DMA_CTLR_1), "");
 
 	zassert_equal(DT_DMAS_CELL_BY_NAME(TEST_TEMP, rx, channel), 3, "");
 	zassert_equal(DT_INST_DMAS_CELL_BY_NAME(0, rx, channel), 3, "");
@@ -1264,6 +1357,9 @@ static void test_cs_gpios(void)
 	zassert_equal(DT_SPI_HAS_CS_GPIOS(TEST_SPI), 1, "");
 	zassert_equal(DT_SPI_NUM_CS_GPIOS(TEST_SPI), 3, "");
 
+	zassert_equal(DT_DEP_ORD(DT_SPI_DEV_CS_GPIOS_CTLR(TEST_SPI_DEV_0)),
+		      DT_DEP_ORD(DT_NODELABEL(test_gpio_1)),
+		     "dev 0 cs gpio controller");
 	zassert_true(!strcmp(DT_SPI_DEV_CS_GPIOS_LABEL(TEST_SPI_DEV_0),
 			     "TEST_GPIO_1"), "");
 	zassert_equal(DT_SPI_DEV_CS_GPIOS_PIN(TEST_SPI_DEV_0), 0x10, "");
@@ -1614,6 +1710,17 @@ static void test_path(void)
 			     "/test/gpio@deadbeef"), "");
 }
 
+static void test_node_name(void)
+{
+	zassert_true(!strcmp(DT_NODE_FULL_NAME(DT_ROOT), "/"), "");
+	zassert_true(!strcmp(DT_NODE_FULL_NAME(TEST_DEADBEEF),
+			     "gpio@deadbeef"), "");
+	zassert_true(!strcmp(DT_NODE_FULL_NAME(TEST_TEMP),
+			     "temperature-sensor"), "");
+	zassert_true(strcmp(DT_NODE_FULL_NAME(TEST_REG),
+			     "reg-holder"), "");
+}
+
 static void test_same_node(void)
 {
 	zassert_true(DT_SAME_NODE(TEST_DEADBEEF, TEST_DEADBEEF), "");
@@ -1655,6 +1762,7 @@ void test_main(void)
 			 ztest_unit_test(test_great_grandchild),
 			 ztest_unit_test(test_dep_ord),
 			 ztest_unit_test(test_path),
+			 ztest_unit_test(test_node_name),
 			 ztest_unit_test(test_same_node)
 		);
 	ztest_run_test_suite(devicetree_api);

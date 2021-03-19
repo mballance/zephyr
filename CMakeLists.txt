@@ -684,8 +684,6 @@ add_custom_command(
 )
 add_custom_target(${OFFSETS_H_TARGET} DEPENDS ${OFFSETS_H_PATH})
 
-zephyr_include_directories(${TOOLCHAIN_INCLUDES})
-
 zephyr_get_include_directories_for_lang(C ZEPHYR_INCLUDES)
 
 add_subdirectory(kernel)
@@ -775,6 +773,7 @@ add_custom_command(
   ${ZEPHYR_BASE}/scripts/gen_handles.py
   --output-source dev_handles.c
   --kernel $<TARGET_FILE:${ZEPHYR_PREBUILT_EXECUTABLE}>
+  --zephyr-base ${ZEPHYR_BASE}
   DEPENDS ${ZEPHYR_PREBUILT_EXECUTABLE}
   )
 set_property(GLOBAL APPEND PROPERTY GENERATED_KERNEL_SOURCE_FILES dev_handles.c)
@@ -1200,6 +1199,21 @@ if(CONFIG_BUILD_OUTPUT_BIN)
   endif()
 endif()
 
+if(CONFIG_BUILD_OUTPUT_BIN AND CONFIG_BUILD_OUTPUT_UF2)
+  list(APPEND
+    post_build_commands
+    COMMAND ${PYTHON_EXECUTABLE} ${ZEPHYR_BASE}/scripts/uf2conv.py
+            -c
+            -f ${CONFIG_BUILD_OUTPUT_UF2_FAMILY_ID}
+            -b ${CONFIG_FLASH_LOAD_OFFSET}
+            -o ${KERNEL_UF2_NAME}
+            ${KERNEL_BIN_NAME}
+  )
+  list(APPEND
+    post_build_byproducts
+    ${KERNEL_UF2_NAME}
+  )
+endif()
 
 # Cleanup intermediate files
 if(CONFIG_CLEANUP_INTERMEDIATE_FILES)
