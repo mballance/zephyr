@@ -92,6 +92,7 @@ extern void idle(void *unused1, void *unused2, void *unused3);
  */
 void z_bss_zero(void)
 {
+#ifndef CONFIG_PRECLEARED_BSS
 	(void)memset(__bss_start, 0, __bss_end - __bss_start);
 #if DT_NODE_HAS_STATUS(DT_CHOSEN(zephyr_ccm), okay)
 	(void)memset(&__ccm_bss_start, 0,
@@ -110,6 +111,7 @@ void z_bss_zero(void)
 	(void)memset(&__gcov_bss_start, 0,
 		 ((uintptr_t) &__gcov_bss_end - (uintptr_t) &__gcov_bss_start));
 #endif
+#endif /* CONFIG_PRECLEARED_BSS */
 }
 
 #ifdef CONFIG_STACK_CANARIES
